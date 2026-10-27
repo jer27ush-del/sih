@@ -1,0 +1,98 @@
+# Render Blueprint: creates everything for the portal from this one file.
+# Docs: https://render.com/docs/blueprint-spec   (confirm plans and prices on render.com)
+#
+# Services created:
+#   1. aicte-fdr-portal        web service (Django API + built React app)
+#   2. aicte-fdr-db            PostgreSQL database
+#   3. fdr-maturity-reminders  daily cron job (90/60/30-day reminder emails)
+
+databases:
+  - name: aicte-fdr-db
+    databaseName: aicte_fdr
+    user: aicte_fdr
+    plan: basic-256mb   # paid plan: free databases expire; choose a plan that fits your needs
+
+services:
+  - type: web
+    name: aicte-fdr-portal
+    runtime: python
+    plan: starter        # required for a persistent disk (see below)
+    buildCommand: bash build.sh
+    # Migrations run before the server starts. They only add or change tables; they never delete data.
+    startCommand: python manage.py migrate --noinput && gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 120
+    healthCheckPath: /api/health/
+    disk:
+      name: private-fdr-documents
+      mountPath: /var/data
+      sizeGB: 5
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: NODE_VERSION
+        value: 20
+      - key: DJANGO_DEBUG
+        value: "False"
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: aicte-fdr-db
+          property: connectionString
+      - key: PRIVATE_UPLOAD_ROOT
+        value: /var/data/private_uploads
+      - key: PORTAL_BASE_URL
+        sync: false      # set after first deploy, e.g. https://aicte-fdr-portal.onrender.com
+      - key: EMAIL_BACKEND
+        value: django.core.mail.backends.smtp.EmailBackend
+      - key: EMAIL_HOST
+        sync: false      # your SMTP provider, e.g. smtp.gmail.com or smtp.sendgrid.net
+      - key: EMAIL_PORT
+        value: "587"
+      - key: EMAIL_HOST_USER
+        sync: false
+      - key: EMAIL_HOST_PASSWORD
+        sync: false      # enter in the Render dashboard; never commit it
+      - key: EMAIL_USE_TLS
+        value: "True"
+      - key: EMAIL_USE_SSL
+        value: "False"
+      - key: DEFAULT_FROM_EMAIL
+        sync: false
+
+  - type: cron
+    name: fdr-maturity-reminders
+    runtime: python
+    plan: starter
+    # Render cron schedules use UTC. 03:30 UTC = 09:00 India Standard Time every day.
+    schedule: "30 3 * * *"
+    buildCommand: pip install -r requirements.txt
+    startCommand: python manage.py send_fdr_reminders
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: DJANGO_DEBUG
+        value: "False"
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: aicte-fdr-db
+          property: connectionString
+      - key: PORTAL_BASE_URL
+        sync: false
+      - key: EMAIL_BACKEND
+        value: django.core.mail.backends.smtp.EmailBackend
+      - key: EMAIL_HOST
+        sync: false
+      - key: EMAIL_PORT
+        value: "587"
+      - key: EMAIL_HOST_USER
+        sync: false
+      - key: EMAIL_HOST_PASSWORD
+        sync: false
+      - key: EMAIL_USE_TLS
+        value: "True"
+      - key: EMAIL_USE_SSL
+        value: "False"
+      - key: DEFAULT_FROM_EMAIL
+        sync: false

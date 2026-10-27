@@ -1,0 +1,18 @@
+{% autoescape off %}Dear {{ institution_name }},
+
+This is an automated reminder that the Fixed Deposit Receipt below matures in {{ days_remaining }} days.
+
+  FDR identifier : {{ fdr_number }}
+  Bank           : {{ bank }} ({{ branch }})
+  Maturity date  : {{ maturity_date|date:"d M Y" }}
+  Days remaining : {{ days_remaining }}
+  Portal status  : {{ status }}
+
+Next steps: sign in to the AICTE FDR Management Portal, check the record, and submit a renewal or release request if one is needed.
+{% if portal_url %}
+Portal: {{ portal_url }}
+{% endif %}
+This email is a reminder only. It does not confirm that any request has been received, verified or approved.
+
+This is an automated message. Please do not reply to it.
+{% endautoescape %}

@@ -1,0 +1,30 @@
+# Secrets and local configuration: never commit
+.env
+.env.*
+!.env.example
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+
+# Local databases and private uploads
+db.sqlite3
+*.sqlite3
+private_uploads/
+private_uploads_*/
+
+# Build output and caches
+staticfiles/
+frontend/node_modules/
+frontend/dist/
+frontend/e2e-output/
+e2e-output/
+*.log
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
